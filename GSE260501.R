@@ -18,7 +18,7 @@ UTI <- RunUMAP(UTI, reduction = "pca", dims = 1:30)
 UTI <- FindNeighbors(UTI, reduction = "pca", dims = 1:30)
 UTI <- FindClusters(UTI, resolution = 0.25)
 
-#Dimplot
+# Dimplot
 DimPlot(UTI, reduction = "umap", label = TRUE)
 
 ## SingleR annotation
@@ -34,6 +34,22 @@ UTI$SingleR.label <- results$labels
 
 # Dimplot
 DimPlot(UTI, group.by = "SingleR.label", label = TRUE, reduction = "umap")
+
+
+UTI <- RenameIdents(UTI, `0` = "Monocytes",`1` = "Monocytes", `2` = "Neutrophils", `3` = "T cells", `4` = "Monocytes", `5` = "Macrophages", `6` = "NK cells", `7` = "T cells", `8` = "T cells", `9` = "Macrophages", `10` = "Dendritic cells")
+DimPlot(UTI, label = TRUE, reduction = "umap")
+
+### Cell Neumbers
+cluster_counts <- table(Idents(UTI))
+print(cluster_counts, split.by = "orig.ident")
+
+# Expression of NETosis associated mRNA
+# Violin plots can also be split on some variable. Simply add the splitting variable to object
+# metadata and pass it to the split.by argument
+VlnPlot(UTI, features = c("Il1b"))
+VlnPlot(UTI, features = c("Gla"))
+VlnPlot(UTI, features = c("Anxa1"))
+VlnPlot(UTI, features = c("Egr1"))
 
 # CellChat
 library(CellChat)
@@ -74,8 +90,3 @@ netVisual_circle(cellchat@net$count, vertex.weight = groupSize,
                  weight.scale = T, label.edge= F, title.name = "Number of interactions")
 netVisual_circle(cellchat@net$weight, vertex.weight = groupSize, 
                  weight.scale = T, label.edge= F, title.name = "Interaction weights/strength")
-
-
-
-
-
