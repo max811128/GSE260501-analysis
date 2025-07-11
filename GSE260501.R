@@ -21,12 +21,61 @@ UTI <- FindClusters(UTI, resolution = 0.25)
 #Dimplot
 DimPlot(UTI, reduction = "umap", label = TRUE)
 
-
-
-
+## SingleR annotation
+library(SingleR)
+library(SingleCellExperiment)
+library(celldex)
+ref<-celldex::MouseRNAseqData()
+data.input <- GetAssayData(UTI, assay = "RNA", layer = "data")
+meta <- data.frame(row.names = colnames(UTI))
+sce <- SingleCellExperiment(assays = list(logcounts = data.input), colData = meta)
+results <- SingleR(test = sce, ref = ref, labels = ref$label.main)
+UTI$SingleR.label <- results$labels
 
 # Dimplot
-DimPlot(UTI, group.by = "
-", label = TRUE, reduction = "umap")
+DimPlot(UTI, group.by = "SingleR.label", label = TRUE, reduction = "umap")
+
+# CellChat
+library(CellChat)
+library(reticulate)
+library(patchwork)
+library(circlize)
+meta <- data.frame(group = UTI$SingleR.label, row.names = names(UTI$SingleR.label))
+data.input <- GetAssayData(UTI, assay = "RNA", layer = "data")
+cellchat <- createCellChat(object = data.input, meta = meta, group.by = "group")
+
+# Load the ligand-receptor interaction database
+CellChatDB.mouse <- CellChatDB.mouse
+# ShowDatabaseCategory(CellChatDB.mouse)
+CellChatDB.use <- CellChatDB.mouse
+cellchat@DB <- CellChatDB.use
+
+# Subset and pre-processing the expression data 
+# Subset the expression data to use less RAM
+cellchat <- subsetData(cellchat)
+
+# Pre-processing the expression data
+cellchat <- identifyOverExpressedGenes(cellchat)
+cellchat <- identifyOverExpressedInteractions(cellchat)
+cellchat <- smoothData(cellchat, adj = PPI.mouse)
+cellchat <- computeCommunProb(cellchat, raw.use = FALSE)
+
+cellchat <- filterCommunication(cellchat, min.cells = 10)
+cellchat <- computeCommunProbPathway(cellchat)
+
+cellchat <- aggregateNet(cellchat)
+cellchat@net$count
+cellchat@net$weight
+
+#Circle plot
+groupSize <- as.numeric(table(cellchat@idents))
+par(mfrow = c(1, 2), xpd=TRUE)
+netVisual_circle(cellchat@net$count, vertex.weight = groupSize, 
+                 weight.scale = T, label.edge= F, title.name = "Number of interactions")
+netVisual_circle(cellchat@net$weight, vertex.weight = groupSize, 
+                 weight.scale = T, label.edge= F, title.name = "Interaction weights/strength")
+
+
+
 
 
